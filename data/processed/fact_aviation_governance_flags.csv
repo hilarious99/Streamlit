@@ -1,0 +1,6 @@
+country,sector,digital_procurement,open_contracting,ai_policy,vendor_transparency,country_modifier
+Nigeria,Aviation,True,True,False,True,1.00
+Kenya,Aviation,True,False,True,True,1.00
+South Africa,Aviation,True,True,True,True,1.05
+Ghana,Aviation,False,True,False,True,0.95
+

@@ -9,6 +9,8 @@ def load_passenger_flow():
     file_path = Path(__file__).parent.parent / "data" / "processed" / "fact_route_passenger_flow.csv"
     
     try:
+        if not file_path.exists():
+            return pd.DataFrame()
         df = pd.read_csv(file_path)
         
         # Validate required columns
@@ -17,8 +19,9 @@ def load_passenger_flow():
             raise ValueError(f"Missing required columns. Expected: {required_columns}")
         
         return df
+    except FileNotFoundError:
+        return pd.DataFrame()
     except Exception as e:
-        st.error(f"Error loading passenger flow data: {str(e)}")
         return pd.DataFrame()
 
 
@@ -28,6 +31,8 @@ def load_cargo_flow():
     file_path = Path(__file__).parent.parent / "data" / "processed" / "fact_route_cargo_flow.csv"
     
     try:
+        if not file_path.exists():
+            return pd.DataFrame()
         df = pd.read_csv(file_path)
         
         # Validate required columns
@@ -36,42 +41,33 @@ def load_cargo_flow():
             raise ValueError(f"Missing required columns. Expected: {required_columns}")
         
         return df
-    except Exception as e:
-        st.error(f"Error loading cargo flow data: {str(e)}")
+    except FileNotFoundError:
         return pd.DataFrame()
-
-
-@st.cache_data
-def load_tourism_inbound():
-    """Load tourism inbound data from CSV."""
-    file_path = Path(__file__).parent.parent / "data" / "processed" / "fact_tourism_inbound.csv"
-    
-    try:
-        df = pd.read_csv(file_path)
-        
-        # Validate required columns
-        required_columns = ['country', 'year', 'inbound_tourists']
-        if not all(col in df.columns for col in required_columns):
-            raise ValueError(f"Missing required columns. Expected: {required_columns}")
-        
-        return df
     except Exception as e:
-        st.error(f"Error loading tourism inbound data: {str(e)}")
         return pd.DataFrame()
 
 
 @st.cache_data
 def load_governance_flags():
     """Load computed governance flags from CSV."""
-    file_path = Path(__file__).parent.parent / "data" / "processed" / "fact_aviation_governance_flags_computed.csv"
+    # Try new governance flags file first, then fall back to old structure
+    file_path = Path(__file__).parent.parent / "data" / "processed" / "fact_governance_flags.csv"
     
     try:
+        if not file_path.exists():
+            # Fall back to old file name
+            file_path = Path(__file__).parent.parent / "data" / "processed" / "fact_aviation_governance_flags_computed.csv"
+        
+        if not file_path.exists():
+            return pd.DataFrame()
+            
         df = pd.read_csv(file_path)
         
         # Validate required columns
         required_columns = ['country', 'year', 'governance_flag']
         if not all(col in df.columns for col in required_columns):
-            raise ValueError(f"Missing required columns. Expected: {required_columns}")
+            # If the file exists but has wrong structure, return empty
+            return pd.DataFrame()
         
         return df
     except FileNotFoundError:

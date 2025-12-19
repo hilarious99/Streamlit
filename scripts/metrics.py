@@ -15,9 +15,3 @@ def calculate_total_cargo(df):
     return int(df['cargo_tonnage'].sum())
 
 
-def calculate_total_inbound_tourists(df):
-    """Calculate total inbound tourists."""
-    if df.empty or 'inbound_tourists' not in df.columns:
-        return 0
-    return int(df['inbound_tourists'].sum())
-

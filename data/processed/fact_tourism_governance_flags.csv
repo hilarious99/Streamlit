@@ -1,0 +1,6 @@
+country,sector,digital_procurement,open_contracting,ai_policy,vendor_transparency,country_modifier
+Nigeria,Tourism & Hospitality,True,True,False,False,1.00
+Kenya,Tourism & Hospitality,True,False,True,True,1.00
+South Africa,Tourism & Hospitality,True,True,True,False,1.05
+Ghana,Tourism & Hospitality,False,True,False,True,0.95
+

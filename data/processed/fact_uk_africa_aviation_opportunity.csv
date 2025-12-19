@@ -1,11 +1,9 @@
 country,year,sector,procurement_readiness_score
-Egypt,2023,Aviation,50
-Egypt,2023,Tourism,50
-Ghana,2023,Aviation,20
-Ghana,2023,Tourism,20
-Kenya,2023,Aviation,20
-Kenya,2023,Tourism,20
-Nigeria,2023,Aviation,20
-Nigeria,2023,Tourism,20
-South Africa,2023,Aviation,50
-South Africa,2023,Tourism,50
+Nigeria,2023,Aviation,68.0
+Kenya,2023,Aviation,63.7
+South Africa,2023,Aviation,89.2
+Ghana,2023,Aviation,40.4
+Nigeria,2023,Tourism & Hospitality,41.3
+Kenya,2023,Tourism & Hospitality,56.2
+South Africa,2023,Tourism & Hospitality,59.1
+Ghana,2023,Tourism & Hospitality,35.6

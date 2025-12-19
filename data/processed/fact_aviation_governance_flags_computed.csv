@@ -1,6 +1,5 @@
-country,year,governance_flag
-Egypt,2023,HIGH
-Ghana,2023,LOW
-Kenya,2023,LOW
-Nigeria,2023,LOW
-South Africa,2023,HIGH
+country,sector,digital_procurement,open_contracting,ai_policy,vendor_transparency,country_modifier,ai_procurement_index
+Nigeria,Aviation,True,True,False,True,1.0,0.68
+Kenya,Aviation,True,False,True,True,1.0,0.637
+South Africa,Aviation,True,True,True,True,1.05,0.892
+Ghana,Aviation,False,True,False,True,0.95,0.404

@@ -3,11 +3,10 @@ import plotly.express as px
 from scripts.data_loader import (
     load_passenger_flow, 
     load_cargo_flow, 
-    load_tourism_inbound,
     load_governance_flags,
     load_opportunity_scores
 )
-from scripts.metrics import calculate_total_passengers, calculate_total_cargo, calculate_total_inbound_tourists
+from scripts.metrics import calculate_total_passengers, calculate_total_cargo
 from scripts.pipeline import run_scoring_pipeline
 
 # Page configuration
@@ -35,41 +34,54 @@ if scoring_success:
 # Load base data
 passenger_df = load_passenger_flow()
 cargo_df = load_cargo_flow()
-tourism_df = load_tourism_inbound()
 
 # Load computed scores (with graceful fallback)
 governance_df = load_governance_flags()
 opportunity_df = load_opportunity_scores()
 
 # Country filter (single select, default = All)
+# Get countries from opportunity scores (primary source) or other data sources
 all_countries = set()
+if not opportunity_df.empty:
+    all_countries.update(opportunity_df['country'].unique())
 if not passenger_df.empty:
     all_countries.update(passenger_df['country'].unique())
 if not cargo_df.empty:
     all_countries.update(cargo_df['country'].unique())
-if not tourism_df.empty:
-    all_countries.update(tourism_df['country'].unique())
+if not governance_df.empty:
+    all_countries.update(governance_df['country'].unique())
 
 country_list = ['All'] + sorted(list(all_countries))
 selected_country = st.selectbox("Select Country", country_list, index=0)
 
 # Filter data based on selected country
 if selected_country != 'All':
-    passenger_df_filtered = passenger_df[passenger_df['country'] == selected_country].copy()
-    cargo_df_filtered = cargo_df[cargo_df['country'] == selected_country].copy()
-    tourism_df_filtered = tourism_df[tourism_df['country'] == selected_country].copy()
-    if not governance_df.empty:
+    # Filter passenger data if not empty
+    if not passenger_df.empty and 'country' in passenger_df.columns:
+        passenger_df_filtered = passenger_df[passenger_df['country'] == selected_country].copy()
+    else:
+        passenger_df_filtered = passenger_df.copy()
+    
+    # Filter cargo data if not empty
+    if not cargo_df.empty and 'country' in cargo_df.columns:
+        cargo_df_filtered = cargo_df[cargo_df['country'] == selected_country].copy()
+    else:
+        cargo_df_filtered = cargo_df.copy()
+    
+    # Filter governance data if not empty
+    if not governance_df.empty and 'country' in governance_df.columns:
         governance_df_filtered = governance_df[governance_df['country'] == selected_country].copy()
     else:
         governance_df_filtered = governance_df.copy()
-    if not opportunity_df.empty:
+    
+    # Filter opportunity data if not empty
+    if not opportunity_df.empty and 'country' in opportunity_df.columns:
         opportunity_df_filtered = opportunity_df[opportunity_df['country'] == selected_country].copy()
     else:
         opportunity_df_filtered = opportunity_df.copy()
 else:
     passenger_df_filtered = passenger_df.copy()
     cargo_df_filtered = cargo_df.copy()
-    tourism_df_filtered = tourism_df.copy()
     governance_df_filtered = governance_df.copy()
     opportunity_df_filtered = opportunity_df.copy()
 
@@ -90,7 +102,7 @@ with tab1:
             labels={'country': 'Country', 'passenger_volume': 'Passenger Volume'},
             title="Passenger Volume by Country"
         )
-        st.plotly_chart(fig_passenger, use_container_width=True)
+        st.plotly_chart(fig_passenger, use_container_width=True, key="aviation_passenger_chart")
     
     # Cargo Tonnage Chart
     if not cargo_df_filtered.empty:
@@ -102,7 +114,7 @@ with tab1:
             labels={'country': 'Country', 'cargo_tonnage': 'Cargo Tonnage'},
             title="Cargo Tonnage by Country"
         )
-        st.plotly_chart(fig_cargo, use_container_width=True)
+        st.plotly_chart(fig_cargo, use_container_width=True, key="aviation_cargo_chart")
     
     # Summary Metrics
     st.subheader("Summary Metrics")
@@ -135,7 +147,7 @@ with tab1:
                     labels={'country': 'Country', 'procurement_readiness_score': 'Procurement Readiness Score'},
                     title="Aviation Procurement Readiness Score by Country"
                 )
-                st.plotly_chart(fig_opportunity, use_container_width=True)
+                st.plotly_chart(fig_opportunity, use_container_width=True, key="aviation_opportunity_chart")
             
             # Score Metrics
             col1, col2 = st.columns(2)
@@ -145,7 +157,7 @@ with tab1:
                     avg_aviation = aviation_scores['procurement_readiness_score'].mean()
                     st.metric("Avg Aviation Procurement Score", f"{avg_aviation:.1f}")
             with col2:
-                tourism_scores = opportunity_df_filtered[opportunity_df_filtered['sector'] == 'Tourism']
+                tourism_scores = opportunity_df_filtered[opportunity_df_filtered['sector'] == 'Tourism & Hospitality']
                 if not tourism_scores.empty:
                     avg_tourism = tourism_scores['procurement_readiness_score'].mean()
                     st.metric("Avg Tourism Procurement Score", f"{avg_tourism:.1f}")
@@ -159,7 +171,7 @@ with tab1:
                     labels={'country': 'Country', 'combined_opportunity_score': 'Combined Opportunity Score'},
                     title="Combined Opportunity Score by Country"
                 )
-                st.plotly_chart(fig_opportunity, use_container_width=True)
+                st.plotly_chart(fig_opportunity, use_container_width=True, key="aviation_combined_opportunity_chart")
             
             # Score Metrics
             col1, col2, col3 = st.columns(3)
@@ -185,7 +197,7 @@ with tab1:
         governance_counts.columns = ['governance_flag', 'count']
         
         if not governance_counts.empty:
-            fig_governance = px.bar(
+            fig_governance_aviation = px.bar(
                 governance_counts,
                 x='governance_flag',
                 y='count',
@@ -194,7 +206,7 @@ with tab1:
                 color='governance_flag',
                 color_discrete_map={'HIGH': '#2ecc71', 'LOW': '#e74c3c'}
             )
-            st.plotly_chart(fig_governance, use_container_width=True)
+            st.plotly_chart(fig_governance_aviation, use_container_width=True, key="aviation_governance_chart")
     
     # Data Table Preview
     st.subheader("Data Preview")
@@ -219,23 +231,6 @@ with tab1:
 with tab2:
     st.header("Tourism & Hospitality")
     
-    # Inbound Tourists Chart
-    if not tourism_df_filtered.empty:
-        st.subheader("Inbound Tourists by Country")
-        fig_tourism = px.bar(
-            tourism_df_filtered,
-            x='country',
-            y='inbound_tourists',
-            labels={'country': 'Country', 'inbound_tourists': 'Inbound Tourists'},
-            title="Inbound Tourists by Country"
-        )
-        st.plotly_chart(fig_tourism, use_container_width=True)
-    
-    # Summary Metrics
-    st.subheader("Summary Metrics")
-    total_tourists = calculate_total_inbound_tourists(tourism_df_filtered)
-    st.metric("Total Inbound Tourists", f"{total_tourists:,}")
-    
     # Computed Scores Section
     if not opportunity_df_filtered.empty:
         st.subheader("Tourism Procurement Readiness Scores")
@@ -244,8 +239,8 @@ with tab2:
         has_sector = 'sector' in opportunity_df_filtered.columns and 'procurement_readiness_score' in opportunity_df_filtered.columns
         
         if has_sector:
-            # New structure: Filter for Tourism sector
-            tourism_scores = opportunity_df_filtered[opportunity_df_filtered['sector'] == 'Tourism'].copy()
+            # New structure: Filter for Tourism & Hospitality sector
+            tourism_scores = opportunity_df_filtered[opportunity_df_filtered['sector'] == 'Tourism & Hospitality'].copy()
             
             if not tourism_scores.empty:
                 fig_tourism_score = px.bar(
@@ -255,7 +250,21 @@ with tab2:
                     labels={'country': 'Country', 'procurement_readiness_score': 'Procurement Readiness Score'},
                     title="Tourism Procurement Readiness Score by Country"
                 )
-                st.plotly_chart(fig_tourism_score, use_container_width=True)
+                st.plotly_chart(fig_tourism_score, use_container_width=True, key="tourism_procurement_chart")
+                
+                # Summary Metrics
+                st.subheader("Summary Metrics")
+                avg_tourism_score = tourism_scores['procurement_readiness_score'].mean()
+                max_tourism_score = tourism_scores['procurement_readiness_score'].max()
+                min_tourism_score = tourism_scores['procurement_readiness_score'].min()
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Average Score", f"{avg_tourism_score:.1f}")
+                with col2:
+                    st.metric("Highest Score", f"{max_tourism_score:.1f}")
+                with col3:
+                    st.metric("Lowest Score", f"{min_tourism_score:.1f}")
         else:
             # Old structure: backward compatibility
             if 'tourism_score' in opportunity_df_filtered.columns:
@@ -266,16 +275,39 @@ with tab2:
                     labels={'country': 'Country', 'tourism_score': 'Tourism Score'},
                     title="Tourism Score by Country"
                 )
-                st.plotly_chart(fig_tourism_score, use_container_width=True)
+                st.plotly_chart(fig_tourism_score, use_container_width=True, key="tourism_score_chart")
+    
+    # Governance Flags Section
+    if not governance_df_filtered.empty:
+        st.subheader("Governance Flags")
+        
+        # Governance Flags - Create count for visualization
+        governance_counts = governance_df_filtered['governance_flag'].value_counts().reset_index()
+        governance_counts.columns = ['governance_flag', 'count']
+        
+        if not governance_counts.empty:
+            fig_governance_tourism = px.bar(
+                governance_counts,
+                x='governance_flag',
+                y='count',
+                labels={'governance_flag': 'Governance Flag', 'count': 'Number of Countries'},
+                title="Governance Flags Distribution",
+                color='governance_flag',
+                color_discrete_map={'HIGH': '#2ecc71', 'LOW': '#e74c3c'}
+            )
+            st.plotly_chart(fig_governance_tourism, use_container_width=True, key="tourism_governance_chart")
     
     # Data Table Preview
     st.subheader("Data Preview")
     
-    if not tourism_df_filtered.empty:
-        st.write("**Tourism Inbound Data**")
-        st.dataframe(tourism_df_filtered, use_container_width=True)
-    
     if not opportunity_df_filtered.empty:
-        st.write("**Opportunity Scores**")
-        st.dataframe(opportunity_df_filtered, use_container_width=True)
+        # Show only Tourism & Hospitality sector data
+        tourism_data = opportunity_df_filtered[opportunity_df_filtered['sector'] == 'Tourism & Hospitality']
+        if not tourism_data.empty:
+            st.write("**Tourism & Hospitality Opportunity Scores**")
+            st.dataframe(tourism_data, use_container_width=True)
+    
+    if not governance_df_filtered.empty:
+        st.write("**Governance Flags**")
+        st.dataframe(governance_df_filtered, use_container_width=True)
 
